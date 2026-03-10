@@ -450,17 +450,26 @@ function LoginView({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const f = (k, v) => setForm(x => ({ ...x, [k]: v }));
-  const doLogin = () => {
+  const doLogin = async () => {
     setLoading(true);
-    setTimeout(() => {
+    setErr("");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.pass
+      });
+
+      if (error) {
+        setErr(error.message);
+      } else {
+        // El useEffect en App se encargará de cargar el perfil
+        // a través de la prop supabaseSession que cambiará en App.jsx
+      }
+    } catch (e) {
+      setErr("Error de conexión");
+    } finally {
       setLoading(false);
-      const demos = {
-        "admin@junto.ar": { name: "Admin JUNTO", role: "admin", email: "admin@junto.ar" },
-        "roberto@junto.ar": { name: "Don Roberto", role: "provider", email: "roberto@junto.ar", storeId: 1 },
-        "maria@junto.ar": { name: "María García", role: "client", email: "maria@junto.ar", points: 1240, level: 3 }
-      };
-      onLogin(demos[form.email] || { name: form.name || "Usuario Demo", role, email: form.email || `demo@junto.ar`, points: 0, level: 1 });
-    }, 900);
+    }
   };
   return (
     <div style={{
@@ -2449,7 +2458,7 @@ function AdminPanel({ products, onLogout, toastFn }) {
 /* ══════════════════════════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════════════════════════ */
-export default function App() {
+export default function App({ supabaseSession }) {
   const [screen, setScreen] = useState("onboarding"); // onboarding | login | app
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState(PRODUCTS_DATA);
@@ -2459,6 +2468,28 @@ export default function App() {
   const [favs, setFavs] = useState([1, 6]);
   const [notifs, setNotifs] = useState(NOTIFICATIONS_DATA);
   const [toast, setToast] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Sync user profile from Supabase
+  useEffect(() => {
+    if (supabaseSession?.user) {
+      const email = supabaseSession.user.email;
+      const demos = {
+        "admin@junto.ar": { id: supabaseSession.user.id, name: "Admin JUNTO", role: "admin", email, storeId: null },
+        "roberto@junto.ar": { id: supabaseSession.user.id, name: "Don Roberto", role: "provider", email, storeId: '11111111-1111-1111-1111-111111111111' },
+      };
+
+      const u = demos[email] || {
+        id: supabaseSession.user.id, name: "Usuario Cliente", role: "client", email, points: 0, level: 1
+      };
+
+      setUser(u);
+      setScreen("app");
+    } else {
+      setUser(null);
+      setScreen("login");
+    }
+  }, [supabaseSession]);
 
   const unreadNotifs = notifs.filter(n => !n.read).length;
 
