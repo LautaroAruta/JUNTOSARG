@@ -1,0 +1,19 @@
+{
+  "name": "JUNTO — Compras Grupales",
+  "short_name": "JUNTO",
+  "description": "Comprá en grupo y ahorrá hasta 40%",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B1D3A",
+  "theme_color": "#0B1D3A",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["shopping", "lifestyle"],
+  "lang": "es-AR",
+  "screenshots": [
+    { "src": "/screenshot.png", "sizes": "390x844", "type": "image/png" }
+  ]
+}
