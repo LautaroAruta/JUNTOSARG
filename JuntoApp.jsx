@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "./lib/supabase.js";
-
-/* ════════════════════════════════════════════════════════════════
+import { supabase, getProducts, getStores, getNotifications, getMyOrders, getMyFavorites, getDemands } from "./lib/supabase.js";/* ════════════════════════════════════════════════════════════════
    JUNTO v2 — Plataforma de Compras Grupales
    San Martín, Mendoza, Argentina
    Mejoras: onboarding · chat grupal · favoritos · reseñas
@@ -84,60 +82,15 @@ const ACTIVITY_MSGS = [
   "⚡ ¡Solo quedan 2 lugares en el grupo de pollo!",
 ];
 
-/* ── Products & Stores ───────────────────────────────────────── */
-const PRODUCTS_DATA = [
-  { id: 1, name: "Yerba Playadito 1kg", emoji: "🧉", cat: "Almacén", pInd: 8500, pGroup: 5200, minB: 20, stock: 200, secs: 72000, cur: 17, storeId: 1, desc: "Yerba mate molida gruesa 100% argentina. Bolsa de 1kg. Ideal para tereré y mate.", featured: true, shares: 89, rating: 4.8, reviews: 34, views: 312, tag: "MÁS POPULAR" },
-  { id: 2, name: "Aceite Cocinero 1.5L", emoji: "🛢️", cat: "Almacén", pInd: 15000, pGroup: 10500, minB: 20, stock: 100, secs: 57600, cur: 8, storeId: 1, desc: "Aceite de girasol refinado, botella de 1.5L. Ideal para cocina diaria.", featured: true, shares: 47, rating: 4.6, reviews: 22, views: 189, tag: "DESTACADO" },
-  { id: 3, name: "Arroz Gallo Oro 5kg", emoji: "🍚", cat: "Almacén", pInd: 12000, pGroup: 8500, minB: 15, stock: 80, secs: 43200, cur: 12, storeId: 1, desc: "Arroz largo fino premium. Bolsa de 5kg. Sin TACC.", featured: false, shares: 31, rating: 4.7, reviews: 18, views: 156, tag: null },
-  { id: 4, name: "Azúcar Ledesma 2kg ×3", emoji: "🍬", cat: "Almacén", pInd: 7200, pGroup: 5400, minB: 12, stock: 60, secs: 86400, cur: 10, storeId: 2, desc: "Pack de 3 bolsas azúcar blanca 2kg cada una.", featured: false, shares: 22, rating: 4.5, reviews: 12, views: 98, tag: null },
-  { id: 5, name: "Fideos Matarazzo ×6", emoji: "🍝", cat: "Almacén", pInd: 9600, pGroup: 7000, minB: 10, stock: 120, secs: 36000, cur: 9, storeId: 2, desc: "Pack 6 paquetes fideos spaghetti 400g. Sémola de trigo.", featured: false, shares: 19, rating: 4.4, reviews: 9, views: 87, tag: null },
-  { id: 6, name: "Pedigree Adultos 15kg", emoji: "🐾", cat: "Mascotas", pInd: 42000, pGroup: 28000, minB: 5, stock: 30, secs: 28800, cur: 4, storeId: 3, desc: "Alimento balanceado perros adultos. Bolsa 15kg. Veterinario recomendado.", featured: true, shares: 63, rating: 4.9, reviews: 41, views: 278, tag: "⭐ TOP" },
-  { id: 7, name: "Shampoo Pantene ×3", emoji: "🧴", cat: "Higiene", pInd: 10500, pGroup: 7200, minB: 10, stock: 50, secs: 64800, cur: 6, storeId: 4, desc: "Pack 3 unidades shampoo + acondicionador 400ml. Cabello normal.", featured: false, shares: 14, rating: 4.3, reviews: 8, views: 72, tag: null },
-  { id: 8, name: "Pollo Fresco ×3kg", emoji: "🍗", cat: "Carnicería", pInd: 18000, pGroup: 13500, minB: 8, stock: 40, secs: 14400, cur: 7, storeId: 5, desc: "Pollos frescos enteros. Peso aprox 3kg. Entrega el mismo día.", featured: false, shares: 38, rating: 4.5, reviews: 16, views: 134, tag: "⏰ URGENTE" },
-  { id: 9, name: "Lavandina Regular ×4", emoji: "🧹", cat: "Limpieza", pInd: 6400, pGroup: 4800, minB: 15, stock: 90, secs: 50400, cur: 5, storeId: 2, desc: "Pack 4 botellas lavandina 900ml. Concentración estándar.", featured: false, shares: 11, rating: 4.2, reviews: 6, views: 54, tag: null },
-  { id: 10, name: "Detergente Skip ×2", emoji: "🫧", cat: "Limpieza", pInd: 8800, pGroup: 6200, minB: 10, stock: 70, secs: 32400, cur: 3, storeId: 4, desc: "Pack 2 botellones detergente 3L. Todas las telas.", featured: false, shares: 9, rating: 4.1, reviews: 5, views: 41, tag: null },
-  { id: 11, name: "Lechuga + Tomate ×5kg", emoji: "🥗", cat: "Verdulería", pInd: 5200, pGroup: 3600, minB: 8, stock: 30, secs: 18000, cur: 2, storeId: 6, desc: "Verduras frescas de temporada. Lechuga criolla + tomate perita.", featured: false, shares: 7, rating: 4.6, reviews: 4, views: 38, tag: "NUEVO" },
-  { id: 12, name: "Pan Lactal Bimbo ×3", emoji: "🍞", cat: "Panadería", pInd: 4200, pGroup: 3100, minB: 6, stock: 50, secs: 21600, cur: 5, storeId: 2, desc: "Pack 3 panes lactal de molde 500g. Suave y esponjoso.", featured: false, shares: 5, rating: 4.3, reviews: 7, views: 62, tag: "NUEVO" },
-];
-
-const STORES_DATA = [
-  { id: 1, name: "Almacén Don Roberto", emoji: "🏪", addr: "Av. San Martín 450", cat: "Almacén", rating: 4.8, approved: true, revenue: 340000, orders: 42, since: "Nov 2024", desc: "El almacén más completo del barrio. 20 años de experiencia en San Martín.", members: 89 },
-  { id: 2, name: "Distribuidora Pérez Hnos.", emoji: "📦", addr: "Belgrano 210", cat: "Distribuidora", rating: 4.5, approved: true, revenue: 210000, orders: 28, since: "Dic 2024", desc: "Distribuidora mayorista con los mejores precios en productos de limpieza y almacén.", members: 54 },
-  { id: 3, name: "Veterinaria Central", emoji: "🐾", addr: "Rivadavia 780", cat: "Veterinaria", rating: 4.9, approved: true, revenue: 180000, orders: 15, since: "Ene 2025", desc: "Especialistas en salud animal. Alimentos y accesorios para mascotas.", members: 41 },
-  { id: 4, name: "Farmacia y Perfumería Sol", emoji: "💊", addr: "San Martín 120", cat: "Farmacia", rating: 4.7, approved: true, revenue: 290000, orders: 22, since: "Nov 2024", desc: "Farmacia y perfumería con amplio stock. Cosméticos y cuidado personal.", members: 67 },
-  { id: 5, name: "Carnicería El Gaucho", emoji: "🥩", addr: "Las Heras 55", cat: "Carnicería", rating: 4.6, approved: true, revenue: 420000, orders: 35, since: "Feb 2025", desc: "Carnes frescas de primera calidad. Cortes especiales para asado.", members: 78 },
-  { id: 6, name: "Verdulería La Huerta", emoji: "🌿", addr: "9 de Julio 330", cat: "Verdulería", rating: 4.4, approved: true, revenue: 45000, orders: 8, since: "Mar 2025", desc: "Frutas y verduras frescas de productores locales de San Martín.", members: 22 },
-];
+const PRODUCTS_DATA = [];
+const STORES_DATA = [];
 
 const CATS = ["Todos", "Almacén", "Mascotas", "Higiene", "Carnicería", "Limpieza", "Verdulería", "Panadería"];
 
-const REVIEWS_DATA = {
-  1: [
-    { id: 1, user: "María G.", avatar: "MG", rating: 5, text: "Excelente calidad. El grupo se completó en menos de 3 horas. Muy recomendable.", date: "hace 2 días", verified: true },
-    { id: 2, user: "Carlos L.", avatar: "CL", rating: 4, text: "Buena yerba y precio increíble. Ahorré mucho comparado al super.", date: "hace 5 días", verified: true },
-    { id: 3, user: "Ana R.", avatar: "AR", rating: 5, text: "Siempre compro por JUNTO. El grupo de yerba es el más activo del barrio.", date: "hace 1 semana", verified: true },
-  ],
-  6: [
-    { id: 1, user: "Pedro S.", avatar: "PS", rating: 5, text: "Mi perro come esto hace años. El precio en grupo es increíble, 33% más barato.", date: "hace 3 días", verified: true },
-    { id: 2, user: "Lucía M.", avatar: "LM", rating: 5, text: "Excelente producto y el proveedor es muy confiable.", date: "hace 1 semana", verified: true },
-  ],
-};
-
-const CHAT_DATA = {
-  1: [
-    { id: 1, user: "María G.", avatar: "MG", text: "¡Hola grupo! Yo ya me anoté, faltan 3 más 🧉", time: "10:23", self: false },
-    { id: 2, user: "Carlos L.", avatar: "CL", text: "Me sumo ahora! Alguien tiene el link para compartir?", time: "10:31", self: false },
-    { id: 3, user: "Tú", avatar: "VD", text: "Acá el link: junto.ar/grupo/1", time: "10:45", self: true },
-    { id: 4, user: "Ana R.", avatar: "AR", text: "Yo le mandé a 2 amigas del barrio, deberían entrar pronto!", time: "11:02", self: false },
-  ],
-};
-
-const DEMAND_DATA = [
-  { id: 1, product: "Aceite de oliva 1L", votes: 34, desc: "Aceite de oliva extra virgen, preferentemente de San Juan.", cat: "Almacén" },
-  { id: 2, product: "Fertilizante para jardín", votes: 21, desc: "Para plantas ornamentales y huertas caseras.", cat: "Jardín" },
-  { id: 3, product: "Croquetas para gato", votes: 18, desc: "Alimento para gatos adultos, bolsa grande.", cat: "Mascotas" },
-  { id: 4, product: "Papel higiénico ×12", votes: 15, desc: "Pack económico, calidad triple hoja.", cat: "Limpieza" },
-];
+// REVIEWS_DATA y ACT_MESSAGES migradas a API.
+// Se dejan vacías localmente para no romper la app si algo carga estático.
+const DEMAND_DATA = [];
+const REVIEWS_DATA = {};
 
 const BADGES = [
   { id: "first", icon: "🥇", name: "Primer grupo", desc: "Te uniste a tu primer grupo", xp: 50 },
@@ -145,13 +98,6 @@ const BADGES = [
   { id: "social", icon: "📣", name: "Embajador", desc: "Invitaste a 3 amigos", xp: 150 },
   { id: "loyal", icon: "⭐", name: "Comprador fiel", desc: "5 grupos completados", xp: 300 },
   { id: "fast", icon: "⚡", name: "Veloz", desc: "Fuiste el primero en unirte", xp: 100 },
-];
-
-const NOTIFICATIONS_DATA = [
-  { id: 1, type: "group", icon: "⚡", title: "¡Falta 1 persona!", body: "El grupo de Yerba Playadito está casi completo.", time: "hace 5 min", read: false, productId: 1 },
-  { id: 2, type: "complete", icon: "✅", title: "Grupo completado", body: "El grupo de Arroz Gallo Oro se completó. Podés ir a retirar.", time: "hace 30 min", read: false, productId: 3 },
-  { id: 3, type: "promo", icon: "🎁", title: "Oferta especial", body: "Nuevo grupo de Pedigree con 33% de descuento.", time: "hace 2hs", read: true, productId: 6 },
-  { id: 4, type: "refer", icon: "👥", title: "Referido exitoso", body: "Tu amigo Carlos usó tu código. ¡Ganaste $500!", time: "ayer", read: true },
 ];
 
 /* ══════════════════════════════════════════════════════════════
@@ -531,9 +477,23 @@ function LoginView({ onLogin }) {
                 <Input label="WhatsApp" value={form.phone} onChange={v => f("phone", v)} type="tel" placeholder="261-555-1234" prefix="🇦🇷" />
                 <Input label="Contraseña" value={form.pass} onChange={v => f("pass", v)} type="password" placeholder="Mínimo 8 caracteres" />
                 {err && <div style={{ color: T.red, fontSize: 12, fontWeight: 600 }}>⚠ {err}</div>}
-                <Btn v="green" size="lg" full loading={loading} onClick={() => {
-                  if (!form.name || !form.email || !form.phone) { setErr("Completá todos los campos"); return; }
-                  setLoading(true); setTimeout(() => { setLoading(false); setStep(2); setErr(""); }, 700);
+                <Btn v="green" size="lg" full loading={loading} onClick={async () => {
+                  if (!form.name || !form.email || !form.phone || !form.pass) { setErr("Completá todos los campos"); return; }
+                  if (form.pass.length < 8) { setErr("La contraseña debe tener al menos 8 caracteres"); return; }
+                  setLoading(true); setErr("");
+                  try {
+                    const { error } = await supabase.auth.signUp({
+                      email: form.email,
+                      password: form.pass,
+                      options: { data: { name: form.name, phone: form.phone } }
+                    });
+                    if (error) throw error;
+                    setStep(2);
+                  } catch (e) {
+                    setErr(e.message || "Error al crear cuenta");
+                  } finally {
+                    setLoading(false);
+                  }
                 }}>Crear cuenta gratis →</Btn>
                 <div style={{ fontSize: 11, color: T.slateL, textAlign: "center", lineHeight: 1.6 }}>
                   Al registrarte aceptás los <span style={{ color: T.blue }}>Términos</span> y la <span style={{ color: T.blue }}>Política de privacidad</span>
@@ -542,15 +502,14 @@ function LoginView({ onLogin }) {
             )}
             {tab === "registro" && step === 2 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16, textAlign: "center" }}>
-                <div style={{ fontSize: 60 }}>📲</div>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 18, color: T.dark }}>Verificá tu número</div>
-                <div style={{ fontSize: 13, color: T.slate }}>Código enviado al {form.phone || "tu teléfono"}</div>
-                <Input label="Código de 4 dígitos" value={form.code} onChange={v => f("code", v)} placeholder="1234" hint="Usá 1234 para demo" autoFocus />
-                {err && <div style={{ color: T.red, fontSize: 12, fontWeight: 600 }}>⚠ {err}</div>}
-                <Btn v="green" size="lg" full loading={loading} onClick={() => {
-                  if (form.code !== "1234") { setErr("Código incorrecto. Usá 1234."); return; }
-                  setLoading(true); setTimeout(() => { setLoading(false); onLogin({ name: form.name, role: "client", email: form.email, points: 0, level: 1 }); }, 600);
-                }}>Verificar →</Btn>
+                <div style={{ fontSize: 60 }}>🎉</div>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 18, color: T.dark }}>¡Cuenta Creada!</div>
+                <div style={{ fontSize: 13, color: T.slate }}>
+                  Te enviamos un email de confirmación (si está habilitado), o ya podés ingresar con tu cuenta.
+                </div>
+                <Btn v="green" size="lg" full onClick={() => { setTab("login"); setStep(1); setErr(""); form.pass = ""; }}>
+                  Ir a ingreso →
+                </Btn>
               </div>
             )}
           </div>
@@ -566,8 +525,15 @@ function LoginView({ onLogin }) {
 /* ══════════════════════════════════════════════════════════════
    LIVE ACTIVITY TICKER
 ══════════════════════════════════════════════════════════════ */
-function Ticker() {
-  const msgs = [...ACTIVITY_MSGS, ...ACTIVITY_MSGS];
+function Ticker() { // Dejamos vacío o pasamos notificaciones de DB resumidas en el futuro
+  return <ActivityFeed msgs={ACTIVITY_MSGS} />;
+}
+
+function ActivityFeed({ msgs = [] }) {
+  if (!msgs || msgs.length === 0) return null;
+
+  const tickerMsgs = [...msgs, ...msgs]; // Duplicate for continuous scroll
+
   return (
     <div style={{ background: T.navy, overflow: "hidden", height: 32, display: "flex", alignItems: "center" }}>
       <div style={{
@@ -1433,10 +1399,10 @@ function ProductDetail({ p, joined, fav, onBack, onJoin, onFav, user, toastFn, o
 /* ══════════════════════════════════════════════════════════════
    STORES VIEW
 ══════════════════════════════════════════════════════════════ */
-function StoresView({ products, onProduct, toastFn }) {
+function StoresView({ products, stores, onProduct, toastFn }) {
   const [selected, setSelected] = useState(null);
   if (selected) {
-    const s = STORES_DATA.find(x => x.id === selected);
+    const s = stores.find(x => x.id === selected);
     const sProds = products.filter(p => p.storeId === selected);
     return (
       <div style={{ paddingBottom: 100 }}>
@@ -1490,7 +1456,7 @@ function StoresView({ products, onProduct, toastFn }) {
         Tiendas
       </div>
       <div style={{ color: T.slateL, fontSize: 14, marginBottom: 18 }}>Proveedores verificados en San Martín</div>
-      {STORES_DATA.map(s => {
+      {stores.map(s => {
         const sProds = products.filter(p => p.storeId === s.id);
         return (
           <Card key={s.id} onClick={() => setSelected(s.id)} style={{ marginBottom: 12, padding: 16 }}>
@@ -1563,11 +1529,27 @@ function FavoritesView({ products, favs, joined, onProduct }) {
    DEMAND VIEW
 ══════════════════════════════════════════════════════════════ */
 function DemandView({ toastFn }) {
-  const [demand, setDemand] = useState(DEMAND_DATA);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ product: "", desc: "", cat: "Almacén" });
+  const [tab, setTab] = useState("votar"); // votar | pedir
+  const [demands, setDemands] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ prod: "", cat: "Almacén", desc: "" });
   const f = (k, v) => setForm(x => ({ ...x, [k]: v }));
-  const addVote = id => setDemand(d => d.map(x => x.id === id ? { ...x, votes: x.votes + 1 } : x));
+
+  useEffect(() => {
+    async function loadDemands() {
+      const data = await getDemands();
+      setDemands(data);
+      setLoading(false);
+    }
+    loadDemands();
+  }, []);
+
+  const handleVote = async (id) => {
+    // Aquí idealmente llamamos a voteDemand de supabase.js con el auth.uid()
+    // Por ahora simulamos UI rápida:
+    setDemands(d => d.map(x => x.id === id ? { ...x, votes: x.votes + 1 } : x));
+    toastFn("✅ Voto registrado", "success");
+  };
   return (
     <div style={{ padding: "18px 16px 100px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -1948,7 +1930,7 @@ function ProfileView({ user, joined, products, onLogout, toastFn }) {
 /* ══════════════════════════════════════════════════════════════
    PROVIDER PANEL (v2)
 ══════════════════════════════════════════════════════════════ */
-function ProviderPanel({ products, user, onLogout, toastFn }) {
+function ProviderPanel({ products, user, onLogout, toastFn, onRefresh }) {
   const [tab, setTab] = useState("dash");
   const myProds = products.filter(p => p.storeId === user.storeId || p.storeId === 1);
   const [form, setForm] = useState({ name: "", cat: "Almacén", pInd: "", pGroup: "", minB: "", time: "24", stock: "", desc: "" });
@@ -2028,6 +2010,7 @@ function ProviderPanel({ products, user, onLogout, toastFn }) {
 
       setPublished(form.name);
       toastFn("🚀 Producto publicado con éxito", "success");
+      if (onRefresh) onRefresh();
     } catch (err) {
       console.error(err);
       toastFn(`Error: ${err.message}`, "error");
@@ -2461,35 +2444,139 @@ function AdminPanel({ products, onLogout, toastFn }) {
 export default function App({ supabaseSession }) {
   const [screen, setScreen] = useState("onboarding"); // onboarding | login | app
   const [user, setUser] = useState(null);
-  const [products, setProducts] = useState(PRODUCTS_DATA);
+  const [products, setProducts] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [navView, setNavView] = useState("home"); // home|stores|demand|orders|profile|favs|notifs
   const [selected, setSelected] = useState(null);
   const [joined, setJoined] = useState([]);
-  const [favs, setFavs] = useState([1, 6]);
-  const [notifs, setNotifs] = useState(NOTIFICATIONS_DATA);
+  const [favs, setFavs] = useState([]);
+  const [notifs, setNotifs] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [toast, setToast] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
+  const loadInitialData = useCallback(async (userId = null) => {
+    setLoadingData(true);
+
+    const fetchPromises = [
+      getProducts(),
+      getStores()
+    ];
+
+    if (userId) {
+      fetchPromises.push(getNotifications(userId));
+      fetchPromises.push(getMyOrders(userId));
+      fetchPromises.push(getMyFavorites(userId));
+    }
+
+    const [prodsRes, storesRes, notifsRes, ordersRes, favsRes] = await Promise.all(fetchPromises);
+
+    // Mapeo productos
+    const mappedProducts = prodsRes.data.map(p => ({
+      id: p.id,
+      name: p.name,
+      emoji: p.emoji || '📦',
+      cat: p.category,
+      pInd: p.price_individual,
+      pGroup: p.price_group,
+      minB: p.groups?.[0]?.min_buyers || p.min_buyers,
+      stock: p.stock,
+      secs: p.expires_seconds || 86400,
+      cur: p.groups?.[0]?.current_buyers || 0,
+      storeId: p.store_id,
+      desc: p.description,
+      featured: p.featured,
+      shares: p.shares || 0,
+      rating: p.rating || 0,
+      reviews: p.review_count || 0,
+      views: p.views || 0,
+      tag: p.tag,
+      image_url: p.image_url
+    }));
+
+    // Mapeo tiendas a frontend format
+    const mappedStores = storesRes.map(s => ({
+      id: s.id,
+      name: s.name,
+      emoji: s.emoji || '🏪',
+      addr: s.address,
+      cat: s.category,
+      rating: s.rating || 0,
+      approved: s.approved,
+      revenue: s.revenue || 0,
+      orders: s.orders || 0,
+      since: s.since || 'Reciente',
+      desc: s.description || '',
+      members: s.members || 0
+    }));
+
+    setProducts(mappedProducts);
+    setStores(mappedStores);
+
+    if (userId) {
+      setNotifs(notifsRes || []);
+
+      if (favsRes) {
+        setFavs(favsRes);
+      }
+
+      // Extraemos los IDs de los grupos u ordenes y establecemos 'joined'
+      if (ordersRes && ordersRes.data) {
+        setOrders(ordersRes.data);
+        setJoined(ordersRes.data.map(o => o.groups?.product_id).filter(Boolean));
+      }
+    }
+
+    setLoadingData(false);
+  }, []);
+
+  useEffect(() => {
+    // La carga inicial se maneja ahora en el useEffect de supabaseSession
+    // para asegurarse de tener o no el userId
+  }, []);
+
   // Sync user profile from Supabase
   useEffect(() => {
-    if (supabaseSession?.user) {
-      const email = supabaseSession.user.email;
-      const demos = {
-        "admin@junto.ar": { id: supabaseSession.user.id, name: "Admin JUNTO", role: "admin", email, storeId: null },
-        "roberto@junto.ar": { id: supabaseSession.user.id, name: "Don Roberto", role: "provider", email, storeId: '11111111-1111-1111-1111-111111111111' },
-      };
-
-      const u = demos[email] || {
-        id: supabaseSession.user.id, name: "Usuario Cliente", role: "client", email, points: 0, level: 1
-      };
-
-      setUser(u);
-      setScreen("app");
-    } else {
-      setUser(null);
-      setScreen("login");
+    async function syncProfile() {
+      if (supabaseSession?.user) {
+        setScreen("app"); 
+        const email = supabaseSession.user.email;
+        const userId = supabaseSession.user.id;
+        
+        // Cargar perfil real desde Supabase para obtener el rol, storeId, etc.
+        const { data: profile } = await supabase.from('users').select('*').eq('id', userId).single();
+        
+        if (profile) {
+          // Normalizar storeId y otros campos
+          const userObj = {
+            id: profile.id,
+            name: profile.name || email.split('@')[0],
+            email: email,
+            role: profile.role || "client",
+            level: profile.level || 1,
+            points: profile.points || 0,
+            storeId: profile.store_id
+          };
+          setUser(userObj);
+        } else {
+          // Fallback temporal caso no se dispare el trigger
+          setUser({
+            id: userId, name: email.split('@')[0], email, role: "client", points: 0, level: 1
+          });
+        }
+        
+        // Load data with user context
+        loadInitialData(userId);
+      } else {
+        setUser(null);
+        setScreen("login");
+        // Load public data only
+        loadInitialData(null);
+      }
     }
-  }, [supabaseSession]);
+    syncProfile();
+  }, [supabaseSession, loadInitialData]);
 
   const unreadNotifs = notifs.filter(n => !n.read).length;
 
@@ -2524,12 +2611,16 @@ export default function App({ supabaseSession }) {
   if (screen === "onboarding") return <><FONTS /><Onboarding onDone={() => setScreen("login")} /></>;
   if (!user) return <><FONTS /><LoginView onLogin={u => { setUser(u); setScreen("app"); }} /></>;
 
+  if (loadingData && screen === "app") {
+    return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: T.bg }}><FONTS /><div style={{ color: T.blue, fontWeight: 700 }}>Cargando...</div></div>;
+  }
+
   // Special panels
   if (user.role === "provider") return (
     <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: T.bg }}>
       <FONTS />
       {toast && <Toast key={toast.key} msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      <ProviderPanel products={products} user={user} onLogout={() => setUser(null)} toastFn={showToast} />
+      <ProviderPanel products={products} user={user} onLogout={() => setUser(null)} toastFn={showToast} onRefresh={loadInitialData} />
     </div>
   );
   if (user.role === "admin") return (
@@ -2565,7 +2656,7 @@ export default function App({ supabaseSession }) {
             toastFn={showToast} onAddPoints={handleAddPoints} />
         )}
         {navView === "stores" && !selected && (
-          <StoresView products={products} onProduct={p => { setSelected(p.id); setNavView("stores"); }} toastFn={showToast} />
+          <StoresView products={products} stores={stores} onProduct={p => { setSelected(p.id); setNavView("stores"); }} toastFn={showToast} />
         )}
         {navView === "stores" && selected && currentProduct && (
           <ProductDetail p={currentProduct} user={user} joined={joined} fav={favs.includes(selected)}
